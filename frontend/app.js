@@ -21,15 +21,6 @@ function initializeApiKey() {
     return sessionStorage.getItem("api_key");
 }
 
-const API_KEY = initializeApiKey();
-
-if (API_KEY) {
-    loadSlots();
-} else {
-    slotsStatus.textContent =
-        "Access link required. Please use the link provided to you.";
-}
-
 const API_BASE = "";
 
 const slotsList = document.getElementById("slots-list");
@@ -50,6 +41,16 @@ const newBookingButton = document.getElementById("new-booking-button");
 let availableSlots = [];
 let selectedSlot = null;
 let pendingRequest = null;
+
+
+const API_KEY = initializeApiKey();
+
+if (API_KEY) {
+    loadSlots();
+} else {
+    slotsStatus.textContent =
+        "Access link required. Please use the link provided to you.";
+}
 
 
 // Format a date in the patient's browser timezone.
