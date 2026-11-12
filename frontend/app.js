@@ -28,6 +28,11 @@ const slotsStatus = document.getElementById("slots-status");
 const providerFilter = document.getElementById("provider-filter");
 const refreshButton = document.getElementById("refresh-button");
 
+const pagination = document.getElementById("pagination");
+const previousPageButton = document.getElementById("previous-page");
+const nextPageButton = document.getElementById("next-page");
+const pageInfo = document.getElementById("page-info");
+
 const bookingForm = document.getElementById("booking-form");
 const submitButton = document.getElementById("submit-button");
 const formError = document.getElementById("form-error");
@@ -38,9 +43,13 @@ const confirmationMessage = document.getElementById("confirmation-message");
 const bookingReference = document.getElementById("booking-reference");
 const newBookingButton = document.getElementById("new-booking-button");
 
+let allSlots = [];
 let availableSlots = [];
 let selectedSlot = null;
 let pendingRequest = null;
+
+const PAGE_SIZE = 10;
+let currentPage = 1;
 
 
 const API_KEY = initializeApiKey();
@@ -113,9 +122,13 @@ async function loadSlots() {
     refreshButton.disabled = true;
 
     try {
-        const data = await apiRequest("/api/slots");
+        const data = await apiRequest("/slots");
 
-        availableSlots = data.slots.filter(slot => slot.available);
+        // Keep every slot so we can identify all providers.
+        allSlots = data.slots;
+
+        // Only available slots can be selected for booking.
+        availableSlots = allSlots.filter(slot => slot.available);
 
         // Clear a selection if it is no longer available.
         if (
@@ -132,6 +145,7 @@ async function loadSlots() {
     } catch (error) {
         slotsStatus.textContent = error.message;
         slotsList.replaceChildren();
+        pagination.hidden = true;
 
     } finally {
         refreshButton.disabled = false;
@@ -144,7 +158,7 @@ function populateProviderFilter() {
     const previousValue = providerFilter.value;
 
     const providers = [
-        ...new Set(availableSlots.map(slot => slot.provider))
+        ...new Set(allSlots.map(slot => slot.provider))
     ].sort();
 
     providerFilter.replaceChildren();
@@ -182,13 +196,26 @@ function renderSlots() {
             ? "There are currently no available appointments."
             : "No appointments found for this provider.";
 
+        pagination.hidden = true;
         return;
     }
+
+    // Calculate the number of pages.
+    const totalPages = Math.ceil(filteredSlots.length / PAGE_SIZE);
+
+    // Keep the current page within valid limits.
+    currentPage = Math.min(currentPage, totalPages);
+
+    // Get only the appointments for the current page.
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    const endIndex = startIndex + PAGE_SIZE;
+
+    const pageSlots = filteredSlots.slice(startIndex, endIndex);
 
     slotsStatus.textContent =
         `${filteredSlots.length} appointment(s) available`;
 
-    filteredSlots.forEach(slot => {
+    pageSlots.forEach(slot => {
         const card = document.createElement("article");
         card.className = "slot-card";
 
@@ -226,6 +253,14 @@ function renderSlots() {
         card.append(info, selectButton);
         slotsList.appendChild(card);
     });
+
+    // Update pagination controls.
+    pagination.hidden = totalPages <= 1;
+
+    pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+
+    previousPageButton.disabled = currentPage === 1;
+    nextPageButton.disabled = currentPage === totalPages;
 }
 
 
@@ -292,7 +327,7 @@ bookingForm.addEventListener("submit", async event => {
     submitButton.textContent = "Booking...";
 
     try {
-        const booking = await apiRequest("/api/bookings", {
+        const booking = await apiRequest("/bookings", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -353,10 +388,42 @@ newBookingButton.addEventListener("click", () => {
     renderSlots();
 });
 
+// Allow the patient to start another booking.
+newBookingButton.addEventListener("click", () => {
+    confirmation.hidden = true;
+    bookingForm.hidden = false;
+    selectionSummary.hidden = false;
+
+    formError.textContent = "";
+    pendingRequest = null;
+    selectedSlot = null;
+
+    currentPage = 1;
+
+    updateSelection();
+    renderSlots();
+});
 
 // Event listeners.
-providerFilter.addEventListener("change", renderSlots);
+// Event listeners.
+providerFilter.addEventListener("change", () => {
+    currentPage = 1;
+    renderSlots();
+});
+
 refreshButton.addEventListener("click", loadSlots);
+
+previousPageButton.addEventListener("click", () => {
+    if (currentPage > 1) {
+        currentPage--;
+        renderSlots();
+    }
+});
+
+nextPageButton.addEventListener("click", () => {
+    currentPage++;
+    renderSlots();
+});
 
 
 // Initial page load.
