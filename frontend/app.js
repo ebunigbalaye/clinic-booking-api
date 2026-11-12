@@ -374,19 +374,6 @@ function showConfirmation(booking) {
 }
 
 
-// Allow the patient to start another booking.
-newBookingButton.addEventListener("click", () => {
-    confirmation.hidden = true;
-    bookingForm.hidden = false;
-    selectionSummary.hidden = false;
-
-    formError.textContent = "";
-    pendingRequest = null;
-    selectedSlot = null;
-
-    updateSelection();
-    renderSlots();
-});
 
 // Allow the patient to start another booking.
 newBookingButton.addEventListener("click", () => {
@@ -404,7 +391,7 @@ newBookingButton.addEventListener("click", () => {
     renderSlots();
 });
 
-// Event listeners.
+
 // Event listeners.
 providerFilter.addEventListener("change", () => {
     currentPage = 1;
@@ -426,5 +413,3 @@ nextPageButton.addEventListener("click", () => {
 });
 
 
-// Initial page load.
-loadSlots();
